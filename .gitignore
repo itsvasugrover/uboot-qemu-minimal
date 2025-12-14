@@ -1,0 +1,6 @@
+# Ignore external dependencies
+u-boot/
+
+# Ignore build artifacts
+output/
+build/
