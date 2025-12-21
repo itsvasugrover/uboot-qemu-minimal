@@ -42,6 +42,10 @@ Remove the cloned U-Boot repository:
 ./clean.sh
 ```
 
+## Contributing
+
+I welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines on how to contribute to this project.
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
