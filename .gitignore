@@ -4,3 +4,6 @@ u-boot/
 # Ignore build artifacts
 output/
 build/
+
+# Logs
+logs/

@@ -1,0 +1,18 @@
+diff --git a/arch/x86/lib/tables.c b/arch/x86/lib/tables.c
+index d7f183f9..d6f0e35e 100644
+--- a/arch/x86/lib/tables.c
++++ b/arch/x86/lib/tables.c
+@@ -45,9 +45,11 @@ struct table_info {
+ 	int align;
+ };
+ 
+-/* QEMU's tables include quite a bit of empty space */
++/* QEMU's tables include quite a bit of empty space;
++ * extra 8K headroom is needed when measured boot or EFI TCG2 is enabled
++ * as they add a TPM2 ACPI table (~64 extra bytes) */
+ #ifdef CONFIG_QEMU
+-#define ACPI_SIZE	(192 << 10)
++#define ACPI_SIZE	(200 << 10)
+ #else
+ #define ACPI_SIZE	SZ_64K
+ #endif
