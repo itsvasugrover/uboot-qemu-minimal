@@ -6,9 +6,12 @@
 #
 # Usage: ./scripts/embed-key.sh [key-name]   (default: dev)
 #
+# The key-name MUST match the one passed to ./scripts/make-demo-fit.sh so
+# that the key-name-hint written into the ITS matches the key used to sign.
+#
 # Prerequisites:
-#   keys/<name>.key  — from ./scripts/gen-keys.sh
-#   build/boot.itb   — from ./scripts/make-demo-fit.sh
+#   keys/<name>.key   — from ./scripts/gen-keys.sh [key-name]
+#   build/boot.itb    — from ./scripts/make-demo-fit.sh [key-name]
 #   u-boot/u-boot.dtb — from ./build.sh
 
 set -euo pipefail

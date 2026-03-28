@@ -156,8 +156,8 @@ Expected output in U-Boot serial console:
 |---|---|---|
 | 1 | `gen-keys.sh` | `keys/dev.key` (private), `keys/dev.crt` (X.509 cert) |
 | 2 | `build.sh` | `build/u-boot.rom`, `u-boot/u-boot.dtb` |
-| 3 | `make-demo-fit.sh` | `build/boot.itb` (signed FIT), `build/boot.img` (raw disk) |
-| 4 | `embed-key.sh` | `u-boot.dtb` with cert, new `build/u-boot.rom` with cert baked in |
+| 3 | `make-demo-fit.sh` | `build/boot.itb` (unsigned FIT), `build/boot.img` (raw disk) |
+| 4 | `embed-key.sh` | `build/boot.itb` (signed FIT), `u-boot.dtb` with cert, `build/u-boot.rom` with cert baked in |
 | 5 | `qemu.sh --boot-img` | U-Boot reads disk, verifies FIT, prints `OK` or `Signature check Failed!` |
 
 > **Note:** Steps 2 and 4 both run `make`. Step 2 is a full build (distclean). Step 4 is an incremental re-link only — it takes ~2 seconds because only the DTB-linked objects are rebuilt.

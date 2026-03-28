@@ -23,8 +23,20 @@ while [[ $# -gt 0 ]]; do
     case "$1" in
         --no-tpm)    USE_TPM=0 ;;
         --no-kvm)    USE_KVM=0 ;;
-        --serial-log) SERIAL_LOG="$2"; shift ;;
-        --boot-img)  BOOT_IMG="$2"; shift ;;
+        --serial-log)
+            if [[ $# -lt 2 || "$2" == --* ]]; then
+                log_error "--serial-log requires a FILE argument"
+                echo "Usage: $0 [--no-tpm] [--no-kvm] [--serial-log FILE] [--boot-img FILE]"
+                exit 1
+            fi
+            SERIAL_LOG="$2"; shift ;;
+        --boot-img)
+            if [[ $# -lt 2 || "$2" == --* ]]; then
+                log_error "--boot-img requires a FILE argument"
+                echo "Usage: $0 [--no-tpm] [--no-kvm] [--serial-log FILE] [--boot-img FILE]"
+                exit 1
+            fi
+            BOOT_IMG="$2"; shift ;;
         *) log_error "Unknown argument: $1"; echo "Usage: $0 [--no-tpm] [--no-kvm] [--serial-log FILE] [--boot-img FILE]"; exit 1 ;;
     esac
     shift
