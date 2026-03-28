@@ -1,9 +1,9 @@
-# uboot-qemu-minimal
+# uboot-qemu-secure-boot
 
-[![Build](https://github.com/itsvasugrover/uboot-qemu-minimal/actions/workflows/build.yml/badge.svg)](https://github.com/itsvasugrover/uboot-qemu-minimal/actions/workflows/build.yml)
-[![ShellCheck](https://github.com/itsvasugrover/uboot-qemu-minimal/actions/workflows/shellcheck.yml/badge.svg)](https://github.com/itsvasugrover/uboot-qemu-minimal/actions/workflows/shellcheck.yml)
-[![QEMU Smoke Test](https://github.com/itsvasugrover/uboot-qemu-minimal/actions/workflows/qemu-smoke-test.yml/badge.svg)](https://github.com/itsvasugrover/uboot-qemu-minimal/actions/workflows/qemu-smoke-test.yml)
-[![Open in Dev Containers](https://img.shields.io/static/v1?label=Dev%20Containers&message=Open&color=blue&logo=visualstudiocode)](https://vscode.dev/redirect?url=vscode://ms-vscode-remote.remote-containers/cloneInVolume?url=https://github.com/itsvasugrover/uboot-qemu-minimal)
+[![Build](https://github.com/itsvasugrover/uboot-qemu-secure-boot/actions/workflows/build.yml/badge.svg)](https://github.com/itsvasugrover/uboot-qemu-secure-boot/actions/workflows/build.yml)
+[![ShellCheck](https://github.com/itsvasugrover/uboot-qemu-secure-boot/actions/workflows/shellcheck.yml/badge.svg)](https://github.com/itsvasugrover/uboot-qemu-secure-boot/actions/workflows/shellcheck.yml)
+[![QEMU Smoke Test](https://github.com/itsvasugrover/uboot-qemu-secure-boot/actions/workflows/qemu-smoke-test.yml/badge.svg)](https://github.com/itsvasugrover/uboot-qemu-secure-boot/actions/workflows/qemu-smoke-test.yml)
+[![Open in Dev Containers](https://img.shields.io/static/v1?label=Dev%20Containers&message=Open&color=blue&logo=visualstudiocode)](https://vscode.dev/redirect?url=vscode://ms-vscode-remote.remote-containers/cloneInVolume?url=https://github.com/itsvasugrover/uboot-qemu-secure-boot)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 A minimal, security-hardened U-Boot build and test environment targeting **QEMU x86_64** with full **TPM 2.0** (via swtpm), **Measured Boot**, **FIT Image Signing** (RSA-4096), and **UEFI Secure Boot** support. Designed as a firmware security reference for automotive and embedded Linux platforms.
@@ -62,7 +62,7 @@ A minimal, security-hardened U-Boot build and test environment targeting **QEMU 
 Open the repository in VS Code and click **Reopen in Container**.  
 All tools are pre-installed. See [.devcontainer/](.devcontainer/) for the full environment definition.
 
-[![Open in Dev Containers](https://img.shields.io/static/v1?label=Dev%20Containers&message=Open&color=blue&logo=visualstudiocode)](https://vscode.dev/redirect?url=vscode://ms-vscode-remote.remote-containers/cloneInVolume?url=https://github.com/itsvasugrover/uboot-qemu-minimal)
+[![Open in Dev Containers](https://img.shields.io/static/v1?label=Dev%20Containers&message=Open&color=blue&logo=visualstudiocode)](https://vscode.dev/redirect?url=vscode://ms-vscode-remote.remote-containers/cloneInVolume?url=https://github.com/itsvasugrover/uboot-qemu-secure-boot)
 
 ### Native (Ubuntu 24.04)
 

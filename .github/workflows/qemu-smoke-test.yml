@@ -1,11 +1,6 @@
 name: QEMU Smoke Test
 
 on:
-  push:
-    branches:
-      - main
-      - develop
-      - 'feature/**'
   pull_request:
     branches:
       - main

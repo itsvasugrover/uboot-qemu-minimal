@@ -1,8 +1,8 @@
 blank_issues_enabled: true
 contact_links:
   - name: Documentation
-    url: https://github.com/itsvasugrover/uboot-qemu-minimal/blob/develop/README.md
+    url: https://github.com/itsvasugrover/uboot-qemu-secure-boot/blob/develop/README.md
     about: Please review the project documentation before submitting an issue
   - name: Security Vulnerability
-    url: https://github.com/itsvasugrover/uboot-qemu-minimal/security/advisories/new
+    url: https://github.com/itsvasugrover/uboot-qemu-secure-boot/security/advisories/new
     about: Report security vulnerabilities through GitHub Security Advisories

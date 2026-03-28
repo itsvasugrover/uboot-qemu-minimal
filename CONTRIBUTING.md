@@ -1,4 +1,4 @@
-# Contributing to uboot-qemu-minimal
+# Contributing to uboot-qemu-secure-boot
 
 As a solo developer, I maintain strict development practices to ensure code quality and maintainability. This guide outlines the processes I follow for development.
 
