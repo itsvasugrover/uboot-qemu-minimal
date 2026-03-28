@@ -1,0 +1,66 @@
+name: QEMU Smoke Test
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+      - 'feature/**'
+  pull_request:
+    branches:
+      - main
+      - develop
+
+jobs:
+  smoke-test:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            gcc make flex bison bc \
+            python3 python3-dev python3-pip python3-setuptools swig \
+            openssl libssl-dev libgnutls28-dev u-boot-tools \
+            device-tree-compiler python3-pyelftools \
+            qemu-system-x86 swtpm swtpm-tools
+
+      - name: Clone and build U-Boot
+        run: bash setup.sh && bash build.sh
+
+      - name: Run QEMU smoke test (10 s timeout, TCG mode)
+        run: |
+          mkdir -p logs
+          set +e
+          timeout 10 bash qemu.sh --no-kvm --serial-log logs/serial.log
+          EXIT=$?
+          set -e
+          # 0 = QEMU exited cleanly, 124 = timed out (expected in CI — no OS to load)
+          if [ "$EXIT" -ne 0 ] && [ "$EXIT" -ne 124 ]; then
+            echo "QEMU exited with unexpected code: $EXIT"
+            cat logs/serial.log || true
+            exit 1
+          fi
+
+      - name: Verify U-Boot appeared in boot log
+        run: |
+          if ! grep -q "U-Boot" logs/serial.log; then
+            echo "ERROR: 'U-Boot' string not found in serial log"
+            cat logs/serial.log
+            exit 1
+          fi
+          echo "Smoke test PASSED — U-Boot booted successfully."
+          echo "--- Serial log snippet ---"
+          grep "U-Boot" logs/serial.log | head -5
+
+      - name: Upload logs
+        if: ${{ always() && !env.ACT }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: qemu-logs-${{ github.sha }}
+          path: logs/
+          retention-days: 7
