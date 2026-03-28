@@ -1,6 +1,6 @@
 #!/bin/bash
 # qemu.sh — Launch QEMU x86_64 with U-Boot ROM and optional swtpm (TPM 2.0).
-# Usage: ./qemu.sh [--no-tpm] [--no-kvm] [--serial-log FILE]
+# Usage: ./qemu.sh [--no-tpm] [--no-kvm] [--serial-log FILE] [--boot-img FILE]
 
 set -euo pipefail
 
@@ -17,13 +17,27 @@ TPM_SOCK="${TPM_DIR}.sock"
 USE_TPM=1
 USE_KVM=1
 SERIAL_LOG=""
+BOOT_IMG=""
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        --no-tpm) USE_TPM=0 ;;
-        --no-kvm) USE_KVM=0 ;;
-        --serial-log) SERIAL_LOG="$2"; shift ;;
-        *) log_error "Unknown argument: $1"; echo "Usage: $0 [--no-tpm] [--no-kvm] [--serial-log FILE]"; exit 1 ;;
+        --no-tpm)    USE_TPM=0 ;;
+        --no-kvm)    USE_KVM=0 ;;
+        --serial-log)
+            if [[ $# -lt 2 || "$2" == --* ]]; then
+                log_error "--serial-log requires a FILE argument"
+                echo "Usage: $0 [--no-tpm] [--no-kvm] [--serial-log FILE] [--boot-img FILE]"
+                exit 1
+            fi
+            SERIAL_LOG="$2"; shift ;;
+        --boot-img)
+            if [[ $# -lt 2 || "$2" == --* ]]; then
+                log_error "--boot-img requires a FILE argument"
+                echo "Usage: $0 [--no-tpm] [--no-kvm] [--serial-log FILE] [--boot-img FILE]"
+                exit 1
+            fi
+            BOOT_IMG="$2"; shift ;;
+        *) log_error "Unknown argument: $1"; echo "Usage: $0 [--no-tpm] [--no-kvm] [--serial-log FILE] [--boot-img FILE]"; exit 1 ;;
     esac
     shift
 done
@@ -124,6 +138,19 @@ if [ "$USE_TPM" -eq 1 ]; then
     log_info "TPM 2.0          : enabled"
 else
     log_warn "TPM 2.0          : disabled (--no-tpm)"
+fi
+
+if [ -n "$BOOT_IMG" ]; then
+    if [ ! -f "$BOOT_IMG" ]; then
+        log_error "Boot image not found: ${BOOT_IMG}"
+        log_info  "Run ./scripts/make-demo-fit.sh then ./scripts/embed-key.sh first."
+        exit 1
+    fi
+    # shellcheck disable=SC2054  # commas are part of QEMU argument values
+    QEMU_ARGS+=(-drive "file=${BOOT_IMG},format=raw,if=virtio")
+    log_info "Verified boot    : enabled (${BOOT_IMG})"
+else
+    log_info "Verified boot    : disabled (no --boot-img)"
 fi
 
 log_info "QEMU log         : ${LOG_DIR}/qemu.log"

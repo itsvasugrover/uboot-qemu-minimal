@@ -2,9 +2,12 @@
 # make-demo-fit.sh — Assemble a minimal demo FIT image for signing tests.
 #
 # Creates a synthetic 4 KB random payload, writes a boot.its source file,
-# and assembles build/boot.itb — ready to be signed by scripts/sign-fit.sh.
+# and assembles build/boot.itb — ready to be signed by embed-key.sh.
 #
-# Usage: ./scripts/make-demo-fit.sh
+# Usage: ./scripts/make-demo-fit.sh [key-name]   (default: dev)
+#
+# The key-name is written into the ITS as key-name-hint and MUST match the
+# key name passed to ./scripts/embed-key.sh [key-name].
 
 set -euo pipefail
 
@@ -13,6 +16,7 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # shellcheck disable=SC1091
 source "${REPO_ROOT}/scripts/check-deps.sh"
 
+KEY_NAME="${1:-dev}"
 BUILD_DIR="${REPO_ROOT}/build"
 PAYLOAD="demo-payload.bin"          # relative — mkimage resolves /incbin/ from cwd
 ITS_FILE="${BUILD_DIR}/boot.its"
@@ -37,12 +41,12 @@ cat > "${ITS_FILE}" << 'ITS'
         kernel {
             description = "Demo payload (synthetic)";
             data = /incbin/("demo-payload.bin");
-            type = "kernel";
+            type = "standalone";
             arch = "x86";
-            os = "linux";
+            os = "u-boot";
             compression = "none";
-            load = <0x01000000>;
-            entry = <0x01000000>;
+            load = <0x02000000>;
+            entry = <0x02000000>;
             hash-1 {
                 algo = "sha256";
             };
@@ -63,6 +67,7 @@ cat > "${ITS_FILE}" << 'ITS'
     };
 };
 ITS
+sed -i "s/key-name-hint = \"dev\"/key-name-hint = \"${KEY_NAME}\"/g" "${ITS_FILE}"
 
 log_info "Assembling FIT image → ${ITB_FILE}"
 # mkimage resolves /incbin/ paths relative to its working directory
@@ -70,6 +75,17 @@ log_info "Assembling FIT image → ${ITB_FILE}"
 
 echo ""
 log_ok "FIT image assembled: ${ITB_FILE}"
+
+# Create a raw disk image: 128 KB of zeros with the ITB written at offset 0.
+# QEMU passes this to U-Boot as a virtio block device (-drive if=virtio).
+IMG_FILE="${BUILD_DIR}/boot.img"
+log_info "Creating raw boot disk image → ${IMG_FILE}"
+dd if=/dev/zero  of="${IMG_FILE}" bs=65536 count=2 2>/dev/null
+dd if="${ITB_FILE}" of="${IMG_FILE}" bs=512 conv=notrunc 2>/dev/null
+log_ok "Boot disk image created: ${IMG_FILE}"
+
 echo ""
-log_info "Next step — sign it:"
-log_info "  ./scripts/sign-fit.sh build/boot.itb dev"
+log_info "Next steps:"
+log_info "  1. Build U-Boot (if not done):       ./build.sh"
+log_info "  2. Embed key + relink ROM:            ./scripts/embed-key.sh ${KEY_NAME}"
+log_info "  3. Boot with verified image:          ./qemu.sh --boot-img build/boot.img"

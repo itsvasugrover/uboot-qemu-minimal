@@ -10,7 +10,7 @@ CONFIG_DEBUG_UART=y
 CONFIG_DEBUG_UART_BASE=0x3f8
 CONFIG_DEBUG_UART_CLOCK=1843200
 CONFIG_BAUDRATE=115200
-CONFIG_BOOTDELAY=3
+CONFIG_BOOTDELAY=5
 
 # --- Secure Boot (FIT & RSA) ---
 CONFIG_FIT=y
@@ -41,6 +41,24 @@ CONFIG_TPM2_EVENT_LOG_SIZE=8192
 CONFIG_EFI_SECURE_BOOT=y
 CONFIG_EFI_TCG2_PROTOCOL=y
 CONFIG_EFI_TCG2_PROTOCOL_MEASURE_DTB=y
+
+# --- Verified Boot Boot Command ---
+# Scan for a virtio block device (boot.img), read the FIT image and verify it.
+# Fails closed: no distro_bootcmd fallback — a signature failure halts boot.
+CONFIG_BOOTCOMMAND="virtio scan; virtio read 0x01000000 0 0x100; bootm 0x01000000"
+
+# --- Console Lockdown (Keyed Autoboot) ---
+# Only a passphrase (SHA256-hashed at compile time) can interrupt autoboot.
+# Any other key press is silently ignored — no shell without the password.
+#
+# Demo passphrase: stop
+# Regenerate hash: printf '%s' '<passphrase>' | sha256sum
+CONFIG_AUTOBOOT_KEYED=y
+CONFIG_AUTOBOOT_FLUSH_STDIN=y
+CONFIG_AUTOBOOT_ENCRYPTION=y
+CONFIG_AUTOBOOT_STOP_STR_ENABLE=y
+CONFIG_AUTOBOOT_STOP_STR_SHA256="6c45cb72a36e63d522aa54ed8adbd7a29a989474f2f77e0458af8800564ef3cb"
+CONFIG_AUTOBOOT_PROMPT="Passphrase required to abort autoboot (%d s) — type silently\n"
 
 # --- Hardened Defaults ---
 # No persistent environment — prevents runtime tampering via saveenv

@@ -39,7 +39,7 @@ openssl genrsa -out "$KEY_FILE" 4096
 
 log_info "Generating self-signed X.509 certificate (10-year validity) → ${CERT_FILE}"
 openssl req -batch -new -x509 -days 3650 \
-    -subj "/CN=u-boot-fit-signing-${KEY_NAME}/O=uboot-qemu-minimal/C=US" \
+    -subj "/CN=u-boot-fit-signing-${KEY_NAME}/O=uboot-qemu-secure-boot/C=US" \
     -key "$KEY_FILE" \
     -out "$CERT_FILE"
 

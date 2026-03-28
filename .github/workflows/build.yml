@@ -1,13 +1,6 @@
 name: Build
 
 on:
-  push:
-    branches:
-      - main
-      - develop
-      - 'feature/**'
-      - 'fix/**'
-      - 'release/**'
   pull_request:
     branches:
       - main
