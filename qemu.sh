@@ -1,53 +1,137 @@
 #!/bin/bash
-# qemu.sh - Run QEMU with automated swtpm and logging
+# qemu.sh — Launch QEMU x86_64 with U-Boot ROM and optional swtpm (TPM 2.0).
+# Usage: ./qemu.sh [--no-tpm] [--no-kvm] [--serial-log FILE]
 
-BUILD_DIR="build/"
-LOG_DIR="logs/"
-TPM_DIR="/tmp/tpm0"
-TPM_SOCK="${TPM_DIR}-sock"
+set -euo pipefail
 
-# Ensure directories exist
-mkdir -p "$BUILD_DIR"
-mkdir -p "$LOG_DIR"
-mkdir -p "$TPM_DIR"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=scripts/check-deps.sh
+# shellcheck disable=SC1091
+source "${SCRIPT_DIR}/scripts/check-deps.sh"
 
-if [ ! -f "${BUILD_DIR}u-boot.rom" ]; then
-    echo "Error: u-boot.rom not found. Run ./build.sh first."
+BUILD_DIR="build"
+LOG_DIR="logs"
+TPM_DIR="/tmp/uboot-qemu-tpm0"
+TPM_SOCK="${TPM_DIR}.sock"
+
+USE_TPM=1
+USE_KVM=1
+SERIAL_LOG=""
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --no-tpm) USE_TPM=0 ;;
+        --no-kvm) USE_KVM=0 ;;
+        --serial-log) SERIAL_LOG="$2"; shift ;;
+        *) log_error "Unknown argument: $1"; echo "Usage: $0 [--no-tpm] [--no-kvm] [--serial-log FILE]"; exit 1 ;;
+    esac
+    shift
+done
+
+echo ""
+if [ "$USE_TPM" -eq 1 ]; then
+    check_deps qemu-system-x86_64 swtpm || exit 1
+else
+    check_deps qemu-system-x86_64 || exit 1
+fi
+echo ""
+
+if [ ! -f "${BUILD_DIR}/u-boot.rom" ]; then
+    log_error "u-boot.rom not found at ${BUILD_DIR}/u-boot.rom. Run ./build.sh first."
     exit 1
 fi
 
-# Clean up any orphaned socket from a previous bad shutdown
-rm -rf "$TPM_SOCK"
+mkdir -p "${LOG_DIR}"
 
-echo ">>> Starting swtpm in the background..."
-swtpm socket \
-  --tpmstate dir="$TPM_DIR" \
-  --ctrl type=unixio,path="$TPM_SOCK" \
-  --tpm2 \
-  --log level=10 > "${LOG_DIR}swtpm.log" 2>&1 &
-SWTPM_PID=$!
+# Auto-detect KVM availability
+if [ "$USE_KVM" -eq 1 ] && ! [ -r /dev/kvm ]; then
+    log_warn "KVM not available — falling back to TCG (software emulation)."
+    USE_KVM=0
+fi
 
-# Give swtpm a second to initialize the socket
-sleep 1
+# Cleanup on exit
+SWTPM_PID=""
+cleanup() {
+    if [ -n "$SWTPM_PID" ] && kill -0 "$SWTPM_PID" 2>/dev/null; then
+        log_info "Stopping swtpm (PID: ${SWTPM_PID})..."
+        kill "$SWTPM_PID" 2>/dev/null || true
+        wait "$SWTPM_PID" 2>/dev/null || true
+    fi
+    rm -f "$TPM_SOCK"
+}
+trap cleanup EXIT INT TERM
 
-echo ">>> Starting QEMU for U-Boot..."
-qemu-system-x86_64 \
-  -enable-kvm \
-  -cpu host \
-  -nographic \
-  -m 512M \
-  -smp 1 \
-  -nic none \
-  -no-reboot \
-  -bios "${BUILD_DIR}u-boot.rom" \
-  -chardev socket,id=chrtpm,path="$TPM_SOCK" \
-  -tpmdev emulator,id=tpm0,chardev=chrtpm \
-  -device tpm-tis,tpmdev=tpm0 \
-  -d cpu_reset,int \
-  -D "${LOG_DIR}qemu.log"
+if [ "$USE_TPM" -eq 1 ]; then
+    mkdir -p "$TPM_DIR"
+    rm -f "$TPM_SOCK"
+    log_info "Starting swtpm   (log: ${LOG_DIR}/swtpm.log)..."
+    swtpm socket \
+        --tpmstate dir="$TPM_DIR" \
+        --ctrl type=unixio,path="$TPM_SOCK" \
+        --tpm2 \
+        --log level=5 > "${LOG_DIR}/swtpm.log" 2>&1 &
+    SWTPM_PID=$!
 
-# Cleanup happens automatically when QEMU exits or is killed
-echo ">>> QEMU exited. Cleaning up swtpm (PID: $SWTPM_PID)..."
-kill $SWTPM_PID 2>/dev/null
-rm -f "$TPM_SOCK"
-echo ">>> Done. Logs saved in ${LOG_DIR}."
+    # Wait up to 5 s for the Unix socket to appear
+    for i in {1..10}; do
+        [ -S "$TPM_SOCK" ] && break
+        sleep 0.5
+        if [ "$i" -eq 10 ]; then
+            log_error "swtpm socket not ready after 5 s. Check ${LOG_DIR}/swtpm.log."
+            exit 1
+        fi
+    done
+    log_ok "swtpm ready   (PID: ${SWTPM_PID}, socket: ${TPM_SOCK})"
+fi
+
+# Assemble QEMU arguments
+# shellcheck disable=SC2054  # commas are part of QEMU argument values, not array separators
+if [ -n "$SERIAL_LOG" ]; then
+    # Write serial directly to file — no TTY required (for CI/Docker)
+    SERIAL_OPT=(-display none -serial "file:${SERIAL_LOG}")
+    log_info "Serial log       : ${SERIAL_LOG}"
+else
+    # Interactive: map serial to stdio via -nographic
+    SERIAL_OPT=(-nographic)
+fi
+
+QEMU_ARGS=(
+    "${SERIAL_OPT[@]}"
+    -m 512M
+    -smp 1
+    -nic none
+    -no-reboot
+    -bios "${BUILD_DIR}/u-boot.rom"
+    -d "cpu_reset,int"
+    -D "${LOG_DIR}/qemu.log"
+)
+
+if [ "$USE_KVM" -eq 1 ]; then
+    QEMU_ARGS+=(-enable-kvm -cpu host)
+    log_info "KVM acceleration : enabled"
+else
+    QEMU_ARGS+=(-cpu qemu64)
+    log_info "KVM acceleration : disabled (TCG)"
+fi
+
+if [ "$USE_TPM" -eq 1 ]; then
+    # shellcheck disable=SC2054  # commas are part of QEMU argument values, not array separators
+    QEMU_ARGS+=(
+        -chardev "socket,id=chrtpm,path=${TPM_SOCK}"
+        -tpmdev "emulator,id=tpm0,chardev=chrtpm"
+        -device "tpm-tis,tpmdev=tpm0"
+    )
+    log_info "TPM 2.0          : enabled"
+else
+    log_warn "TPM 2.0          : disabled (--no-tpm)"
+fi
+
+log_info "QEMU log         : ${LOG_DIR}/qemu.log"
+echo ""
+log_info "Launching QEMU x86_64..."
+echo ""
+
+qemu-system-x86_64 "${QEMU_ARGS[@]}"
+
+echo ""
+log_ok "QEMU exited cleanly. Logs in ${LOG_DIR}/."

@@ -5,13 +5,12 @@ CONFIG_BUILD_ROM=y
 CONFIG_ROM_SIZE=2097152
 CONFIG_SYS_X86_START16=0xfffff000
 
-# --- Console & Thermal Stability ---
+# --- Console & Boot ---
 CONFIG_DEBUG_UART=y
 CONFIG_DEBUG_UART_BASE=0x3f8
 CONFIG_DEBUG_UART_CLOCK=1843200
 CONFIG_BAUDRATE=115200
-CONFIG_BOOTDELAY=-1
-CONFIG_ENV_IS_NOWHERE=y
+CONFIG_BOOTDELAY=3
 
 # --- Secure Boot (FIT & RSA) ---
 CONFIG_FIT=y
@@ -36,12 +35,18 @@ CONFIG_CMD_TPM_TEST=y
 CONFIG_MEASURED_BOOT=y
 CONFIG_MEASURE_DEVICETREE=y
 CONFIG_MEASURE_IGNORE_LOG=y
-CONFIG_TPM2_EVENT_LOG_SIZE=4096
+CONFIG_TPM2_EVENT_LOG_SIZE=8192
 
 # --- EFI Security (Optional but recommended) ---
 CONFIG_EFI_SECURE_BOOT=y
 CONFIG_EFI_TCG2_PROTOCOL=y
 CONFIG_EFI_TCG2_PROTOCOL_MEASURE_DTB=y
+
+# --- Hardened Defaults ---
+# No persistent environment — prevents runtime tampering via saveenv
+CONFIG_ENV_IS_NOWHERE=y
+# Restrict writable environment variables to an explicit allowlist
+CONFIG_ENV_WRITEABLE_LIST=y
 
 # --- Unit Tests & Cleanup ---
 # Disable broken internal U-Boot tests

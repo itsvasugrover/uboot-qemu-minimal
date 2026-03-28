@@ -1,0 +1,12 @@
+# Never commit private keys or unencrypted credential files
+*.key
+*.pem
+*.p12
+*.pfx
+
+# Public certificates and public keys (safe to commit)
+*.crt
+*.pub
+
+# OpenSSL serial files (generated automatically)
+*.srl
