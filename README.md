@@ -109,88 +109,62 @@ sudo apt-get install -y gcc make flex bison bc \
 |---|---|
 | `setup.sh [--version TAG]` | Clone U-Boot at a given tag. Prompts before re-cloning. |
 | `build.sh` | Clean → patch → defconfig → merge config → compile. Logs to `logs/build.log`. |
-| `qemu.sh [--no-tpm] [--no-kvm]` | Launch QEMU with swtpm. Auto-detects KVM; falls back to TCG. |
+| `qemu.sh [--no-tpm] [--no-kvm] [--boot-img FILE]` | Launch QEMU with swtpm. Auto-detects KVM; falls back to TCG. Pass `--boot-img` to enable verified boot. |
 | `clean.sh [--build\|--logs\|--uboot\|--all] [--force]` | Selective cleanup with confirmation prompt. |
 | `scripts/check-deps.sh` | Shared helper: colored logging + `check_deps` function (source only). |
 | `scripts/gen-keys.sh [name]` | Generate RSA-4096 key pair + X.509 cert in `keys/`. |
-| `scripts/make-demo-fit.sh` | Assemble a minimal demo FIT image (`build/boot.itb`) for signing tests. |
-| `scripts/sign-fit.sh <image.itb> [name]` | Sign and verify a FIT image with keys from `keys/`. |
+| `scripts/make-demo-fit.sh` | Assemble a demo FIT image (`build/boot.itb`) and raw boot disk (`build/boot.img`). |
+| `scripts/embed-key.sh [name]` | Sign FIT image, embed cert into U-Boot DTB, re-link ROM. Run after `build.sh` + `make-demo-fit.sh`. |
+| `scripts/sign-fit.sh [image.itb] [name]` | Sign and verify a FIT image with keys from `keys/`. |
 
 ## Secure Boot Workflow
 
-FIT image signing allows U-Boot to cryptographically verify a payload (kernel, ramdisk) before executing it. The signing key is embedded in the U-Boot ROM at build time.
+FIT image signing allows U-Boot to cryptographically verify a payload before executing it. The signing certificate is embedded in the U-Boot ROM at build time — U-Boot will **refuse to boot** any image not signed with the embedded key.
 
-### 1. Generate a signing key pair
+### Quick demo (5 commands)
 
 ```bash
+# 1. Generate RSA-4096 key pair
 ./scripts/gen-keys.sh dev
-# Produces:
-#   keys/dev.key  — RSA-4096 private key  (never commit this)
-#   keys/dev.crt  — X.509 certificate     (safe to commit)
-```
 
-### 2. Assemble a FIT image
+# 2. Build U-Boot ROM (generates u-boot.dtb needed for cert embedding)
+./build.sh
 
-For a quick signing demo, use the provided helper:
-
-```bash
+# 3. Assemble a demo FIT image + raw boot disk
 ./scripts/make-demo-fit.sh
-# Produces: build/boot.itb (synthetic 4 KB payload — for testing only)
+
+# 4. Sign FIT, embed cert into DTB, re-link ROM
+./scripts/embed-key.sh dev
+
+# 5. Boot — U-Boot verifies the FIT image before loading
+./qemu.sh --boot-img build/boot.img
 ```
 
-For a real kernel, create a FIT source file (`boot.its`):
-
-```its
-/dts-v1/;
-/ {
-    description = "Signed kernel FIT image";
-    images {
-        kernel {
-            data = /incbin/("build/Image");
-            type = "kernel";
-            arch = "x86_64";
-            os = "linux";
-            compression = "none";
-            load = <0x1000000>;
-            entry = <0x1000000>;
-            signature {
-                algo = "sha256,rsa4096";
-                key-name-hint = "dev";
-            };
-        };
-    };
-    configurations {
-        default = "conf-1";
-        conf-1 {
-            kernel = "kernel";
-            signature {
-                algo = "sha256,rsa4096";
-                key-name-hint = "dev";
-                sign-images = "kernel";
-            };
-        };
-    };
-};
+Expected output in U-Boot serial console:
+```
+## Loading kernel from FIT Image at 01000000 ...
+   Using 'conf-1' configuration
+   Verifying Hash Integrity ... sha256,rsa4096:dev+ OK
+   Loading Kernel Image ...
 ```
 
-```bash
-mkimage -f boot.its build/boot.itb
-```
+`sha256,rsa4096:dev+ OK` confirms the signature verified against the certificate baked into the ROM.
 
-### 3. Sign the FIT image
+### What each step does
 
-```bash
-./scripts/sign-fit.sh build/boot.itb dev
-```
+| Step | Script | What it produces |
+|---|---|---|
+| 1 | `gen-keys.sh` | `keys/dev.key` (private), `keys/dev.crt` (X.509 cert) |
+| 2 | `build.sh` | `build/u-boot.rom`, `u-boot/u-boot.dtb` |
+| 3 | `make-demo-fit.sh` | `build/boot.itb` (signed FIT), `build/boot.img` (raw disk) |
+| 4 | `embed-key.sh` | `u-boot.dtb` with cert, new `build/u-boot.rom` with cert baked in |
+| 5 | `qemu.sh --boot-img` | U-Boot reads disk, verifies FIT, prints `OK` or `Signature check Failed!` |
 
-### 4. Embed the public key into U-Boot ROM
+> **Note:** Steps 2 and 4 both run `make`. Step 2 is a full build (distclean). Step 4 is an incremental re-link only — it takes ~2 seconds because only the DTB-linked objects are rebuilt.
 
-```bash
-mkimage -F -k keys/ -K u-boot/u-boot.dtb -r build/boot.itb
-./build.sh   # rebuild to bake the certificate into the ROM
-```
+### For a real kernel
 
-After this step, U-Boot will **refuse to boot** any FIT image that is not signed with the embedded key.
+Replace `make-demo-fit.sh` with your own `boot.its` pointing at a real `Image`/`uImage`, then run `embed-key.sh` and `qemu.sh --boot-img` as above. The FIT source template is in [the scripts reference](#scripts-reference).
 
 ## Configuration Guide
 

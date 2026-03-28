@@ -37,12 +37,12 @@ cat > "${ITS_FILE}" << 'ITS'
         kernel {
             description = "Demo payload (synthetic)";
             data = /incbin/("demo-payload.bin");
-            type = "kernel";
+            type = "standalone";
             arch = "x86";
-            os = "linux";
+            os = "u-boot";
             compression = "none";
-            load = <0x01000000>;
-            entry = <0x01000000>;
+            load = <0x02000000>;
+            entry = <0x02000000>;
             hash-1 {
                 algo = "sha256";
             };
@@ -70,6 +70,17 @@ log_info "Assembling FIT image → ${ITB_FILE}"
 
 echo ""
 log_ok "FIT image assembled: ${ITB_FILE}"
+
+# Create a raw disk image: 128 KB of zeros with the ITB written at offset 0.
+# QEMU passes this to U-Boot as a virtio block device (-drive if=virtio).
+IMG_FILE="${BUILD_DIR}/boot.img"
+log_info "Creating raw boot disk image → ${IMG_FILE}"
+dd if=/dev/zero  of="${IMG_FILE}" bs=65536 count=2 2>/dev/null
+dd if="${ITB_FILE}" of="${IMG_FILE}" bs=512 conv=notrunc 2>/dev/null
+log_ok "Boot disk image created: ${IMG_FILE}"
+
 echo ""
-log_info "Next step — sign it:"
-log_info "  ./scripts/sign-fit.sh build/boot.itb dev"
+log_info "Next steps:"
+log_info "  1. Build U-Boot (if not done):       ./build.sh"
+log_info "  2. Embed key + relink ROM:            ./scripts/embed-key.sh"
+log_info "  3. Boot with verified image:          ./qemu.sh --boot-img build/boot.img"
