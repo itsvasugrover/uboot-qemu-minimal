@@ -1,0 +1,24 @@
+{
+  "name": "U-Boot QEMU Dev",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "workspaceFolder": "/workspace",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "timonwong.shellcheck",
+        "ms-vscode.cpptools",
+        "ms-vscode.hexeditor",
+        "GitHub.vscode-pull-request-github"
+      ],
+      "settings": {
+        "shellcheck.executablePath": "/usr/bin/shellcheck",
+        "terminal.integrated.defaultProfile.linux": "bash"
+      }
+    }
+  },
+  "postCreateCommand": "echo '\\n✅ Environment ready.\\n   ./setup.sh  — clone U-Boot\\n   ./build.sh  — compile\\n   ./qemu.sh   — run in QEMU with TPM 2.0'",
+  "remoteUser": "ubuntu"
+}
