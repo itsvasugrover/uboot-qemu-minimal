@@ -72,6 +72,7 @@ cleanup() {
         wait "$SWTPM_PID" 2>/dev/null || true
     fi
     rm -f "$TPM_SOCK"
+    rm -rf "$TPM_DIR"
 }
 trap cleanup EXIT INT TERM
 

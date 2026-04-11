@@ -174,7 +174,7 @@ Custom options live in [config/qemu-x86_64](config/qemu-x86_64) and are merged o
 |---|---|---|
 | `CONFIG_ROM_SIZE` | `2097152` | 2 MB ROM image |
 | `CONFIG_BAUDRATE` | `115200` | UART baud rate |
-| `CONFIG_BOOTDELAY` | `3` | 3-second autoboot countdown |
+| `CONFIG_BOOTDELAY` | `5` | 5-second autoboot countdown |
 | `CONFIG_FIT_SIGNATURE` | `y` | Enforce FIT image signature verification |
 | `CONFIG_FIT_RSASSA_PSS` | `y` | RSASSA-PSS padding (recommended over PKCS#1 v1.5) |
 | `CONFIG_RSA_VERIFY_WITH_PKEY` | `y` | Verify against embedded X.509 public key |
@@ -185,6 +185,27 @@ Custom options live in [config/qemu-x86_64](config/qemu-x86_64) and are merged o
 | `CONFIG_EFI_TCG2_PROTOCOL` | `y` | EFI TCG2 (TCG PC Client Platform specification) |
 | `CONFIG_ENV_IS_NOWHERE` | `y` | No persistent environment — prevents `saveenv` tampering |
 | `CONFIG_ENV_WRITEABLE_LIST` | `y` | Restricts `setenv` to an explicit allowlist |
+| `CONFIG_AUTOBOOT_KEYED` | `y` | Console interrupt requires a passphrase (see below) |
+
+### Keyed Autoboot (Console Lockdown)
+
+The autoboot countdown cannot be interrupted by pressing any random key. A SHA-256-hashed passphrase is required. The demo passphrase is **`stop`**.
+
+When you see this prompt in the QEMU serial console:
+
+```
+Passphrase required to abort autoboot (5 s) — type silently
+```
+
+Type `stop` (characters are not echoed) to drop into the U-Boot shell.
+
+To set a custom passphrase, regenerate the hash and update the config:
+
+```bash
+printf '%s' 'your-passphrase' | sha256sum
+# Paste the result into CONFIG_AUTOBOOT_STOP_STR_SHA256 in config/qemu-x86_64
+# Then rebuild: ./build.sh
+```
 
 ## TPM PCR Layout
 
